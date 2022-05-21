@@ -153,7 +153,7 @@ freeproc(struct proc *p)
 }
 
 // Create a user page table for a given process,
-// with no user memory, but with trampoline pages.
+// with no user memory, but with trampoline pages. (蹦床代码的页面)
 pagetable_t
 proc_pagetable(struct proc *p)
 {
@@ -238,7 +238,7 @@ userinit(void)
 int
 growproc(int n)
 {
-  uint sz;
+  uint sz; //size of process memory
   struct proc *p = myproc();
 
   sz = p->sz;
@@ -249,7 +249,7 @@ growproc(int n)
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
-  p->sz = sz;
+  p->sz = sz; 
   return 0;
 }
 
@@ -266,6 +266,10 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
+
+  // copy trace mask (确保子进程继承了父进程的 mask)
+  // 此条语句是为了 确保trace fork()时，也要trace fork()后的子进程的掩码。 所以需要对父进程mask 赋值
+  np->trace_mask = p->trace_mask;
 
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
@@ -692,4 +696,19 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+// 获取 unused的 进程数
+int 
+get_proc_num(void){
+  struct proc* p;
+  int num=0;
+  for(p=proc; p<&proc[NPROC];p++){
+    if(p->state ==UNUSED){
+      acquire(&p->lock);
+      ++num;
+      release(&p->lock);
+    }
+  }
+  return num;
 }

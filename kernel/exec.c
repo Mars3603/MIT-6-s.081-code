@@ -32,10 +32,10 @@ exec(char *path, char **argv)
   // Check ELF header
   if(readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
     goto bad;
-  if(elf.magic != ELF_MAGIC)
+  if(elf.magic != ELF_MAGIC) //如果ELF头有正确的幻数，exec假设二进制文件格式良好
     goto bad;
 
-  if((pagetable = proc_pagetable(p)) == 0)
+  if((pagetable = proc_pagetable(p)) == 0)  // 使用 proc_pagetable() 分配一个没有用户映射的新页表
     goto bad;
 
   // Load program into memory.

@@ -335,14 +335,14 @@ sfence_vma()
 // shift a physical address to the right place for a PTE.
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)
 
-#define PTE2PA(pte) (((pte) >> 10) << 12)
+#define PTE2PA(pte) (((pte) >> 10) << 12)  // 这里先右移10bit 是因为 54bit的PTE低10bit未使用。左移 12bit 其实就是补0操作，为了对齐物理地址
 
 #define PTE_FLAGS(pte) ((pte) & 0x3FF)
 
 // extract the three 9-bit page table indices from a virtual address.
 #define PXMASK          0x1FF // 9 bits
-#define PXSHIFT(level)  (PGSHIFT+(9*(level)))
-#define PX(level, va) ((((uint64) (va)) >> PXSHIFT(level)) & PXMASK)
+#define PXSHIFT(level)  (PGSHIFT+(9*(level)))      // PGSHIFT 是offset 12bit
+#define PX(level, va) ((((uint64) (va)) >> PXSHIFT(level)) & PXMASK) // 右移12 是为了去除 offset，继续右移是为了从27bit中取出 L2,L1,L0.
 
 // one beyond the highest possible virtual address.
 // MAXVA is actually one bit less than the max allowed by

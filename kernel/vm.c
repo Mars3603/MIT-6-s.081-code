@@ -16,7 +16,7 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 extern char trampoline[]; // trampoline.S
 
 /*
- * create a direct-map page table for the kernel.
+ * create a direct-map page table for the kernel. 恒等映射
  */
 void
 kvminit()
@@ -62,22 +62,22 @@ kvminithart()
 //
 // The risc-v Sv39 scheme has three levels of page-table
 // pages. A page-table page contains 512 64-bit PTEs.
-// A 64-bit virtual address is split into five fields:
+// A 64-bit virtual address is split into five fields: va 虚拟地址
 //   39..63 -- must be zero.
 //   30..38 -- 9 bits of level-2 index.
 //   21..29 -- 9 bits of level-1 index.
 //   12..20 -- 9 bits of level-0 index.
 //    0..11 -- 12 bits of byte offset within the page.
 pte_t *
-walk(pagetable_t pagetable, uint64 va, int alloc)
+walk(pagetable_t pagetable, uint64 va, int alloc)  
 {
   if(va >= MAXVA)
     panic("walk");
-
+// 注意，本课程使用的RISC-v处理器，并没有全部使用 64bit，只使用了 低39bit。 也就是 va的 高25位没用。 12 + 27 = 39. 右移(12+9*2) & 0X1FF 取出高9bit的index
   for(int level = 2; level > 0; level--) {
-    pte_t *pte = &pagetable[PX(level, va)];
-    if(*pte & PTE_V) {
-      pagetable = (pagetable_t)PTE2PA(*pte);
+    pte_t *pte = &pagetable[PX(level, va)];   // PX(level, va) 只是从index中取出高9bit地址。通过这个索引 第一级 page directory. 
+    if(*pte & PTE_V) {   // PTE是64bits的地址，是有标志位的。
+      pagetable = (pagetable_t)PTE2PA(*pte);  // 如过有效，则取出PTE中的 PTN，进行下一步转换，无效就返回0.
     } else {
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
@@ -85,7 +85,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
       *pte = PA2PTE(pagetable) | PTE_V;
     }
   }
-  return &pagetable[PX(0, va)];
+  return &pagetable[PX(0, va)]; // 最后返回低9bit的 PPN，加上一个offset。
 }
 
 // Look up a virtual address, return the physical address,
@@ -144,7 +144,7 @@ kvmpa(uint64 va)
 // Create PTEs for virtual addresses starting at va that refer to
 // physical addresses starting at pa. va and size might not
 // be page-aligned. Returns 0 on success, -1 if walk() couldn't
-// allocate a needed page-table page.
+// allocate a needed page-table page.  [添加]pagetable_t 指向根页表页的指针。
 int
 mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 {
@@ -154,7 +154,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   a = PGROUNDDOWN(va);
   last = PGROUNDDOWN(va + size - 1);
   for(;;){
-    if((pte = walk(pagetable, a, 1)) == 0)
+    if((pte = walk(pagetable, a, 1)) == 0) // 调用walk来查找该地址的 PTE 地址，找到后进行初始化。
       return -1;
     if(*pte & PTE_V)
       panic("remap");

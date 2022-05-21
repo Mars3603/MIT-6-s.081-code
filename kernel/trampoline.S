@@ -93,7 +93,7 @@ userret:
         # a1: user page table, for satp.
 
         # switch to the user page table.
-        csrw satp, a1
+        csrw satp, a1    // 在usertrapret中作为第二个参数传递给了这里的userret函数，所以存在a1寄存器中
         sfence.vma zero, zero
 
         # put the saved user a0 in sscratch, so we

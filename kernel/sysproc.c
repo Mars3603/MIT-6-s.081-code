@@ -7,6 +7,9 @@
 #include "spinlock.h"
 #include "proc.h"
 
+// 包含sysinfo的头文件。
+#include "sysinfo.h"
+
 uint64
 sys_exit(void)
 {
@@ -94,4 +97,41 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// 将参数保存到proc结构体里的一个新变量中来实现新的系统调用。
+uint64
+sys_trace(void){
+ 
+  int n;
+
+// argint: Fetch the nth 32-bit system call argument.
+  if(argint(0, &n) < 0)
+    return -1;
+  // 将mask 保存在本进程的 proc结构体中。
+  myproc()->trace_mask=n;
+  return 0;
+ 
+}
+
+//系统调用 sysinfo
+uint64
+sys_sysinfo(void){
+    //将一个struct sysinfo复制回用户空间
+    uint64 addr;
+    if(argaddr(0,&addr)<0)
+      return -1;
+    
+    struct sysinfo info;
+  
+    info.freemem=get_free_mem();
+    info.nproc=get_proc_num();
+
+    // Copy from kernel to user.
+    // Copy len bytes from src to virtual address dstva in a given page table.
+    // Return 0 on success, -1 on error.
+    //函数原型 int copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len) 
+    if (copyout(myproc()->pagetable, addr, (char *)&info, sizeof(info)) < 0) 
+        return -1;
+    return 0;
 }
